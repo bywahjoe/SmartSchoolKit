@@ -15,6 +15,7 @@ Adafruit_SSD1306 display(-1);
 
 Servo myservo;
 int cahaya = 0, suara = 0, putaran = 0, urutan = 0;
+int suhu = 0;
 long jarak = 0;
 
 String nama[6] = {"Abi", "Brian", "Dida", "Ryan", "Sastia", "Wikan"};
@@ -28,8 +29,8 @@ void setup() {
   display.clearDisplay();
   display.display();
 
-  //Tombol
-  pinMode(pin_tombol, INPUT_PULLUP);
+  //Tombol 
+  pinMode(pin_tombol, INPUT);
 
   //Buzzer Speaker
   pinMode(buzz, OUTPUT);
@@ -40,6 +41,7 @@ void setup() {
 
   //Led
   pinMode(led, OUTPUT);
+  pinMode(led_suhu,OUTPUT);
 
   //Servo
   myservo.attach(pin_servo);
@@ -66,15 +68,36 @@ void loop() {
   suara = getSuara();
   putaran = getPutaran();
   urutan = map(putaran, 0, 1023, 0, 5);
+  suhu = getSuhu();
 
   Serial.print("CAHAYA : "); Serial.println(cahaya);
   Serial.print("JARAK  : "); Serial.println(jarak);
   Serial.print("SUARA  : "); Serial.println(suara);
-  Serial.print("TOMBOL : "); Serial.println(!ditekan);
-  Serial.print("PUTARAN: "); Serial.println(getPutaran());
+  Serial.print("TOMBOL : "); Serial.println(ditekan);
+  Serial.print("PUTARAN: "); Serial.println(putaran);
+  Serial.print("SUHU   : "); Serial.println(suhu);
 
+  //Jika Suhu < 41
+  if (suhu <= 41) {
+    ledSuhuON();
+    buzzOFF();
+  } else {
+    ledSuhuOFF();
+    buzzON();
+    delay(3000);
+  }
+
+  //Jika Ditekan
   if (ditekan) {
-    absen[urutan] = 1;
+    unsigned long start = millis(), last = start;
+    while (ditekan) Serial.println("TAHAN");
+    last = millis();
+
+    if (last - start >= 5000L) {
+      resetAbsen();
+    } else {
+      absen[urutan] = 1;
+    }
   }
 
   //Suara Ramai
@@ -85,7 +108,7 @@ void loop() {
     buzzOFF();
     delay(250);
   }
-  
+
   //Cahaya <600 -Siang
   if (cahaya > 600) {
     lampuOFF();
@@ -112,7 +135,12 @@ void buka() {
 void tutup() {
   myservo.write(90);
 }
-
+void ledSuhuON() {
+  digitalWrite(led_suhu, HIGH);
+}
+void ledSuhuOFF() {
+  digitalWrite(led_suhu, LOW);
+}
 int getCahaya() {
   int result = analogRead(pin_cahaya);
   return result;
@@ -131,7 +159,15 @@ int getSuara() {
 int getPutaran() {
   int result = analogRead(pin_putaran);
   return result;
+}
+int getSuhu() {
+  int result,readSuhu;
+  readSuhu=analogRead(pin_suhu);
+//  Serial.println(readSuhu);
+//  result =  readSuhu* 500 / 1023;
+  result =  readSuhu/2.0479;
 
+  return result;
 }
 void lampuON() {
   digitalWrite(led, HIGH);
@@ -156,12 +192,28 @@ void viewDisplay() {
 
   display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setCursor(30, 0);
+  display.setCursor(0, 0);
   display.print(nama[urutan]);
-  display.setCursor(30, 25);
+  display.setCursor(0, 25);
   display.print(result);
-  display.setCursor(30, 45);
+  display.setCursor(0, 45);
   display.print("ABSEN");
+//  display.setCursor(60, 0);
+//  display.print(suhu);
   display.display();
   delay(250);
+}
+void resetAbsen() {
+  for (int i = 0; i < 6; i++)absen[i] = 0;
+
+  display.clearDisplay();
+  display.display();
+
+  display.setCursor(30, 10);
+  display.print("Absen");
+  display.setCursor(25, 30);
+  display.print("Reset!! ");
+
+  display.display();
+  delay(5000);
 }
